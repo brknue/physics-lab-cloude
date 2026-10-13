@@ -1,0 +1,27 @@
+<!doctype html><meta charset=utf-8><title>Black Hole Orbits</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Orbits near a black hole (G=c=1, M=1, horizon r=2). Grey = Newtonian, colour = General Relativity (perihelion precession). L below 3.46 plunges in.');
+const P=UI([{k:'L',label:'Angular momentum L',min:3,max:8,v:4.2,on:()=>d=1},{k:'r',label:'Start radius r0 (apoapsis)',min:5,max:80,step:.5,v:30,on:()=>d=1},{k:'n',label:'Orbits',min:1,max:40,step:1,v:8,on:()=>d=1},{k:'z',label:'Zoom (px per M)',min:2,max:30,v:8},{k:'sp',label:'Speed',min:1,max:100,step:1,v:20}]);
+let d=1,GR=[],NW=[],idx=0;
+function path(rel){const L=P.L,out=[],dp=.004,f=u=>-u+1/(L*L)+(rel?3*u*u:0);let u=1/P.r,up=0;
+for(let ph=0;ph<6.2832*P.n;ph+=dp){out.push([Math.cos(ph)/u,Math.sin(ph)/u]);up+=.5*dp*f(u);u+=dp*up;up+=.5*dp*f(u);if(u>.5||u<1e-3)break}return out}
+function draw(a,n,col){g.strokeStyle=col;g.beginPath();const cx=W/2,cy=H/2,z=P.z;for(let i=0;i<n&&i<a.length;i+=3)i?g.lineTo(cx+a[i][0]*z,cy+a[i][1]*z):g.moveTo(cx+a[i][0]*z,cy+a[i][1]*z);g.stroke()}
+function ring(r,col){g.strokeStyle=col;g.setLineDash([4,6]);g.beginPath();g.arc(W/2,H/2,r*P.z,0,7);g.stroke();g.setLineDash([])}
+RUN(()=>{if(d){GR=path(1);NW=path(0);idx=0;d=0}idx+=P.sp;
+g.fillStyle='#05060a';g.fillRect(0,0,W,H);ring(3,'#665');ring(6,'#456');
+draw(NW,NW.length,'rgba(150,150,150,.35)');draw(GR,idx,'#6df');
+const q=GR[Math.min(idx,GR.length-1)];if(q){g.fillStyle='#fff';g.beginPath();g.arc(W/2+q[0]*P.z,H/2+q[1]*P.z,4,0,7);g.fill()}
+g.fillStyle='#000';g.strokeStyle='#f93';g.beginPath();g.arc(W/2,H/2,2*P.z,0,7);g.fill();g.stroke();
+g.fillStyle='#9ab';g.fillText('dashed rings: photon sphere r=3, ISCO r=6',12,H-14);
+if(idx>GR.length+300)idx=0});
+</script>

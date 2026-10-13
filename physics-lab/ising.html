@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf-8><title>Ising Model</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('2D Ising magnet. Left-drag paints up spins, right-drag paints down. Critical temperature Tc = 2.269. Cool it slowly and watch domains form.');
+const P=UI([{k:'T',label:'Temperature',min:.1,max:6,v:2.5},{k:'h',label:'External field',min:-1,max:1,v:0},{k:'s',label:'Sweeps / frame',min:1,max:10,step:1,v:2},{label:'Random',btn:()=>fill(0)},{label:'All up',btn:()=>fill(1)},{label:'Checkerboard',btn:()=>fill(2)}]);
+const w=160,h=100,L=new Int8Array(w*h),o=document.createElement('canvas');o.width=w;o.height=h;const og=o.getContext('2d'),im=og.createImageData(w,h);
+function fill(m){for(let i=0;i<w*h;i++)L[i]=m==1?1:m==2?(((i%w)+(i/w|0))&1?1:-1):Math.random()<.5?1:-1}fill(0);
+RUN(()=>{const T=P.T;for(let n=0;n<P.s*w*h;n++){const x=Math.random()*w|0,y=Math.random()*h|0,i=y*w+x,s=L[i],nb=L[y*w+(x+1)%w]+L[y*w+(x+w-1)%w]+L[((y+1)%h)*w+x]+L[((y+h-1)%h)*w+x],dE=2*s*(nb+P.h);if(dE<=0||Math.random()<Math.exp(-dE/T))L[i]=-s}
+if(mouse.d){const cx=mouse.x/W*w|0,cy=mouse.y/H*h|0;for(let a=-4;a<=4;a++)for(let b=-4;b<=4;b++)if(a*a+b*b<=16)L[((cy+b+h)%h)*w+(cx+a+w)%w]=mouse.b==2?-1:1}
+let M=0;for(let i=0;i<w*h;i++){M+=L[i];const j=i*4,u=L[i]>0;im.data[j]=u?255:20;im.data[j+1]=u?170:40;im.data[j+2]=u?60:120;im.data[j+3]=255}
+og.putImageData(im,0,0);g.imageSmoothingEnabled=false;g.drawImage(o,0,0,W,H);g.fillStyle='#fff';g.fillText('Magnetization '+(M/(w*h)).toFixed(3)+'    T/Tc '+(T/2.269).toFixed(2),12,H-14)});
+</script>

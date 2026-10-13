@@ -1,0 +1,22 @@
+<!doctype html><meta charset=utf-8><title>Wave Interference Lab</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Click: add wave source. Right-click: remove nearest. Try the phased array and change the phase step to steer the beam.');
+const P=UI([{k:'l',label:'Wavelength (px)',min:10,max:150,step:1,v:50},{k:'w',label:'Frequency',min:.01,max:.2,v:.06},{k:'f',label:'Distance falloff',min:0,max:2,v:.8},{k:'ph',label:'Array phase step',min:-3.14,max:3.14,v:0},{label:'Phased array x8',btn:()=>{S=[];for(let i=0;i<8;i++)S.push({x:W*.2,y:H/2+(i-3.5)*P.l/2,i})}},{label:'Clear',btn:()=>S=[]}]);
+let S=[{x:W*.4,y:H/2,i:0},{x:W*.6,y:H/2,i:0}],t=0;
+const w=220,h=130,o=document.createElement('canvas');o.width=w;o.height=h;const og=o.getContext('2d'),im=og.createImageData(w,h);
+c.addEventListener('mouseup',e=>{if(e.button==2){let bi=-1,bd=1e9;S.forEach((s,i)=>{const d=Math.hypot(s.x-e.clientX,s.y-e.clientY);if(d<bd){bd=d;bi=i}});if(bi>=0)S.splice(bi,1)}else S.push({x:e.clientX,y:e.clientY,i:0})});
+RUN(()=>{t++;const k=6.2832/P.l,om=P.w*6.2832;
+for(let py=0;py<h;py++)for(let px=0;px<w;px++){const x=px*W/w,y=py*H/h;let v=0;for(const s of S){const dx=x-s.x,dy=y-s.y,r=Math.sqrt(dx*dx+dy*dy);v+=Math.sin(k*r-om*t-s.i*P.ph)/Math.pow(1+r/80,P.f)}
+const a=v*45,i=(py*w+px)*4;im.data[i]=a>0?a*3+8:8;im.data[i+1]=Math.abs(a)*.8+8;im.data[i+2]=a<0?-a*3+14:14;im.data[i+3]=255}
+og.putImageData(im,0,0);g.imageSmoothingEnabled=true;g.drawImage(o,0,0,W,H);g.fillStyle='#fff';for(const s of S){g.beginPath();g.arc(s.x,s.y,4,0,7);g.fill()}});
+</script>

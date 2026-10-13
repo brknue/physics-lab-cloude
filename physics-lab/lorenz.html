@@ -1,0 +1,12 @@
+<!doctype html><title>Lorenz Attractor</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:13px system-ui;color:#9ab}#h{position:fixed;left:12px;top:10px;pointer-events:none}canvas{display:block}</style>
+<canvas id=c></canvas><div id=h>Lorenz system: 6 trajectories starting 1e-4 apart. Drag to rotate.</div>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d');let W,H;function rs(){W=c.width=innerWidth;H=c.height=innerHeight}rs();onresize=rs;
+const s=10,r=28,b=8/3,dt=.005,M=1800;let rot=0,tilt=.3;
+const T=[...Array(6)].map((_,i)=>({p:[1+i*1e-4,1,1],h:[]}));
+c.onmousemove=e=>{if(e.buttons){rot+=e.movementX*.01;tilt+=e.movementY*.01}};
+function loop(){rot+=.003;g.fillStyle='#05060a';g.fillRect(0,0,W,H);const k=Math.min(W,H)/55,cr=Math.cos(rot),sr=Math.sin(rot),ct=Math.cos(tilt),st=Math.sin(tilt);
+T.forEach((t,i)=>{for(let n=0;n<3;n++){let[x,y,z]=t.p;t.p=[x+s*(y-x)*dt,y+(x*(r-z)-y)*dt,z+(x*y-b*z)*dt];t.h.push(t.p);if(t.h.length>M)t.h.shift()}
+g.strokeStyle='hsl('+(i*55+180)+',90%,60%)';g.lineWidth=1.3;g.beginPath();
+t.h.forEach(([x,y,z],j)=>{z-=25;const X=x*cr-y*sr,Y=x*sr+y*cr,u=W/2+X*k,v=H/2-(z*ct-Y*st)*k;j?g.lineTo(u,v):g.moveTo(u,v)});g.stroke()});requestAnimationFrame(loop)}loop();
+</script>

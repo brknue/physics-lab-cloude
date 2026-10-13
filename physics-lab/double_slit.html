@@ -1,0 +1,14 @@
+<!doctype html><title>Wave Double Slit</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:13px system-ui;color:#9ab}#h{position:fixed;left:12px;top:10px;pointer-events:none}canvas{display:block}</style><style>canvas{width:min(100vw,calc(100vh*300/190));margin:auto}</style>
+<canvas id=c width=300 height=190></canvas><div id=h>2D wave equation: plane wave through a double slit. Click to drop ripples.</div>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d'),w=300,h=190,u=new Float32Array(w*h),v=new Float32Array(w*h),wl=new Uint8Array(w*h),dm=new Float32Array(w*h).fill(1);
+for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(x>=100&&x<104&&Math.abs(y-h/2)>5&&!(Math.abs(Math.abs(y-h/2)-20)<5))wl[i]=1;
+const e=Math.min(x,w-1-x,y,h-1-y);if(e<20&&x>10)dm[i]=1-.06*(20-e)/20}
+c.onclick=e=>{const R=c.getBoundingClientRect(),x=(e.clientX-R.left)/R.width*w|0,y=(e.clientY-R.top)/R.height*h|0;for(let a=-4;a<=4;a++)for(let b=-4;b<=4;b++)if(a*a+b*b<17)u[(y+b)*w+x+a]+=3};
+const im=g.createImageData(w,h);let t=0;
+function loop(){for(let n=0;n<3;n++){t++;for(let y=0;y<h;y++)u[y*w+15]=Math.sin(t*.22)*2;
+for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;v[i]=(v[i]+.25*(u[i-1]+u[i+1]+u[i-w]+u[i+w]-4*u[i]))*dm[i]}
+for(let i=0;i<w*h;i++){u[i]=wl[i]?0:u[i]+v[i];if(wl[i])v[i]=0}}
+for(let i=0;i<w*h;i++){const a=u[i]*60,o=i*4;if(wl[i]){im.data[o]=im.data[o+1]=im.data[o+2]=140}else{im.data[o]=Math.max(0,a)*2+8;im.data[o+1]=Math.abs(a)*.7+8;im.data[o+2]=Math.max(0,-a)*2+14}im.data[o+3]=255}
+g.putImageData(im,0,0);requestAnimationFrame(loop)}loop();
+</script>

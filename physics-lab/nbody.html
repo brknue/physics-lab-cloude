@@ -1,0 +1,25 @@
+<!doctype html><meta charset=utf-8><title>N-Body Gravity Sandbox</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Drag on canvas to launch a body (drag length = speed). Right-drag launches a heavy star. Bodies merge on collision.');
+const P=UI([{k:'G',label:'Gravity G',min:.1,max:5,v:1},{k:'ts',label:'Time speed',min:.1,max:4,v:1},{k:'m',label:'New body mass',min:.1,max:100,v:1},{k:'tr',label:'Trail length',min:0,max:500,step:1,v:150},{k:'sf',label:'Softening',min:.5,max:30,step:.5,v:5},{label:'Sun + planets',btn:()=>sys()},{label:'Clear',btn:()=>B=[]}]);
+let B=[],d0=null;const R=a=>Math.max(2,Math.cbrt(a.m)*1.6);
+const sys=()=>{B=[{x:W/2,y:H/2,vx:0,vy:0,m:1000,t:[]}];for(let i=0;i<8;i++){const r=60+i*45,a=Math.random()*6.28,v=Math.sqrt(P.G*1000/r);B.push({x:W/2+r*Math.cos(a),y:H/2+r*Math.sin(a),vx:-v*Math.sin(a),vy:v*Math.cos(a),m:1,t:[]})}};sys();
+c.addEventListener('mousedown',e=>d0=[e.clientX,e.clientY,e.button]);
+addEventListener('mouseup',e=>{if(d0){B.push({x:d0[0],y:d0[1],vx:(e.clientX-d0[0])*.05,vy:(e.clientY-d0[1])*.05,m:d0[2]==2?1000:P.m,t:[]});d0=null}});
+RUN(()=>{const dt=P.ts/4;for(let s=0;s<4;s++){for(const a of B){a.ax=a.ay=0;for(const b of B)if(a!==b){const dx=b.x-a.x,dy=b.y-a.y,r2=dx*dx+dy*dy+P.sf*P.sf,k=P.G*b.m/(r2*Math.sqrt(r2));a.ax+=dx*k;a.ay+=dy*k}}
+for(const a of B){a.vx+=a.ax*dt;a.vy+=a.ay*dt;a.x+=a.vx*dt;a.y+=a.vy*dt}
+for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){const a=B[i],b=B[j];if(Math.hypot(a.x-b.x,a.y-b.y)<R(a)+R(b)){const M=a.m+b.m;for(const k of['x','y','vx','vy'])a[k]=(a[k]*a.m+b[k]*b.m)/M;a.m=M;B.splice(j--,1)}}}
+g.fillStyle='#05060a';g.fillRect(0,0,W,H);
+for(const a of B){a.t.push([a.x,a.y]);while(a.t.length>P.tr)a.t.shift();g.strokeStyle='rgba(120,200,255,.4)';g.beginPath();a.t.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke();g.fillStyle=a.m>300?'#ffd45e':'#7ff';g.beginPath();g.arc(a.x,a.y,R(a),0,7);g.fill()}
+if(d0){g.strokeStyle='#fff';g.beginPath();g.moveTo(d0[0],d0[1]);g.lineTo(mouse.x,mouse.y);g.stroke()}});
+</script>

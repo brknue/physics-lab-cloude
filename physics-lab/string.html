@@ -1,0 +1,27 @@
+<!doctype html><meta charset=utf-8><title>Vibrating String</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Drag to pluck the string. Drive the left end and tune the frequency to find resonances. Bars = harmonic mode amplitudes.');
+const P=UI([{k:'N',label:'Beads',min:40,max:300,step:1,v:150,on:()=>init()},{k:'c',label:'Tension (wave speed^2)',min:.02,max:.9,v:.4},{k:'m',label:'Mass gradient (heavy right)',min:0,max:4,v:0},{k:'dm',label:'Damping',min:0,max:.02,step:.0005,v:.001},{k:'a',label:'Drive amplitude',min:0,max:60,step:1,v:0},{k:'f',label:'Drive frequency',min:.005,max:.3,step:.001,v:.05},{label:'Reset',btn:()=>init()}]);
+let y,v,t=0;function init(){y=new Float32Array(P.N);v=new Float32Array(P.N)}init();
+RUN(()=>{const N=P.N,x0=60,dx=(W-120)/(N-1);
+for(let s=0;s<2;s++){t++;const hd=mouse.d?Math.round((mouse.x-x0)/dx):-1;
+for(let i=1;i<N-1;i++){v[i]+=P.c/(1+P.m*i/N)*(y[i+1]-2*y[i]+y[i-1]);v[i]*=1-P.dm}
+for(let i=1;i<N-1;i++)y[i]+=v[i];
+y[0]=P.a?P.a*Math.sin(P.f*t):0;y[N-1]=0;
+if(hd>0&&hd<N-1){y[hd]=mouse.y-H/2;v[hd]=0}}
+g.fillStyle='#05060a';g.fillRect(0,0,W,H);g.strokeStyle='#7cf';g.lineWidth=2;g.beginPath();
+for(let i=0;i<N;i++){const px=x0+i*dx,py=H/2-60+y[i];i?g.lineTo(px,py):g.moveTo(px,py)}g.stroke();g.lineWidth=1;
+g.fillStyle='#fc6';for(let i=0;i<N;i+=Math.ceil(N/60))g.fillRect(x0+i*dx-2,H/2-60+y[i]-2,4,4);
+for(let k=1;k<=16;k++){let a=0;for(let i=1;i<N-1;i++)a+=y[i]*Math.sin(k*Math.PI*i/(N-1));a*=2/N;const bh=Math.min(120,Math.abs(a)*3);g.fillStyle='#6cf';g.fillRect(x0+k*40,H-30-bh,28,bh);g.fillStyle='#9ab';g.fillText(k,x0+k*40+10,H-14)}
+g.fillText('Mode 1 resonance for a uniform string: drive freq = '+(2*Math.sqrt(P.c)*Math.sin(Math.PI/(2*(N-1)))).toFixed(4),x0,H-150)});
+</script>

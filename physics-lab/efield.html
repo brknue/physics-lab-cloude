@@ -1,0 +1,24 @@
+<!doctype html><meta charset=utf-8><title>Electric Field Lab</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Click: add + charge. Right-click: add - charge. Drop test charges and watch them follow the field.');
+const P=UI([{k:'q',label:'New charge strength',min:.2,max:5,v:1},{k:'n',label:'Field lines / charge',min:4,max:48,step:1,v:16},{k:'k',label:'Test-charge force',min:0,max:4,v:1},{k:'dm',label:'Damping',min:0,max:.1,v:.01},{label:'Drop 30 test charges',btn:()=>{for(let i=0;i<30;i++)T.push({x:Math.random()*W,y:Math.random()*H,vx:0,vy:0})}},{label:'Clear all',btn:()=>{Q=[];T=[]}}]);
+let Q=[{x:W*.4,y:H/2,q:1},{x:W*.6,y:H/2,q:-1}],T=[];
+c.addEventListener('mouseup',e=>Q.push({x:e.clientX,y:e.clientY,q:e.button==2?-P.q:P.q}));
+const E=(x,y)=>{let ex=0,ey=0;for(const q of Q){const dx=x-q.x,dy=y-q.y,r2=dx*dx+dy*dy+25,k=q.q*2000/(r2*Math.sqrt(r2));ex+=dx*k;ey+=dy*k}return[ex,ey]};
+RUN(()=>{g.fillStyle='#05060a';g.fillRect(0,0,W,H);g.strokeStyle='rgba(140,180,255,.35)';
+const pos=Q.filter(q=>q.q>0),src=pos.length?pos:Q,sg=pos.length?1:-1;
+for(const s of src)for(let i=0;i<P.n;i++){const a=i/P.n*6.2832;let x=s.x+8*Math.cos(a),y=s.y+8*Math.sin(a);g.beginPath();g.moveTo(x,y);
+for(let k=0;k<600;k++){const e=E(x,y),n=Math.hypot(e[0],e[1])||1;x+=sg*e[0]/n*4;y+=sg*e[1]/n*4;g.lineTo(x,y);if(x<0||y<0||x>W||y>H||Q.some(q=>q!==s&&q.q*sg<0&&Math.hypot(x-q.x,y-q.y)<8))break}g.stroke()}
+T=T.filter(p=>{const e=E(p.x,p.y);p.vx=(p.vx+e[0]*P.k)*(1-P.dm);p.vy=(p.vy+e[1]*P.k)*(1-P.dm);p.x+=p.vx;p.y+=p.vy;g.fillStyle='#fff';g.fillRect(p.x-1.5,p.y-1.5,3,3);return p.x>-50&&p.x<W+50&&p.y>-50&&p.y<H+50&&!Q.some(q=>q.q<0&&Math.hypot(p.x-q.x,p.y-q.y)<8)});
+for(const q of Q){g.fillStyle=q.q>0?'#e44':'#46f';g.beginPath();g.arc(q.x,q.y,8,0,7);g.fill();g.fillStyle='#fff';g.fillText(q.q>0?'+':'-',q.x-3,q.y+4)}});
+</script>

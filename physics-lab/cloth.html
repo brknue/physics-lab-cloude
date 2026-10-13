@@ -1,0 +1,29 @@
+<!doctype html><meta charset=utf-8><title>Cloth Simulation</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Drag to pull the cloth. Right-drag to cut. Sliders change gravity, wind and material.');
+const P=UI([{k:'g',label:'Gravity',min:0,max:1,v:.4},{k:'w',label:'Wind',min:0,max:3,v:.3},{k:'it',label:'Stiffness (iterations)',min:1,max:20,step:1,v:6},{k:'d',label:'Damping',min:.9,max:1,step:.001,v:.99},{k:'te',label:'Tear stretch x',min:1.2,max:6,v:3},{label:'Reset',btn:()=>init()},{label:'Unpin all',btn:()=>pts.forEach(p=>p.pin=0)}]);
+let pts,cons,t=0;const CX=44,CY=28,SP=14;
+function init(){pts=[];cons=[];const ox=W/2-CX*SP/2;for(let y=0;y<CY;y++)for(let x=0;x<CX;x++)pts.push({x:ox+x*SP,y:50+y*SP,ox:ox+x*SP,oy:50+y*SP,pin:y==0&&x%4==0});
+for(let y=0;y<CY;y++)for(let x=0;x<CX;x++){const i=y*CX+x;if(x<CX-1)cons.push({a:pts[i],b:pts[i+1],l:SP});if(y<CY-1)cons.push({a:pts[i],b:pts[i+CX],l:SP})}}
+init();
+RUN(()=>{t++;let grab=null;
+if(mouse.d&&mouse.b==0){let bd=2500;for(const p of pts){const d=(p.x-mouse.x)**2+(p.y-mouse.y)**2;if(d<bd){bd=d;grab=p}}}
+for(const p of pts){if(p.pin)continue;const vx=(p.x-p.ox)*P.d,vy=(p.y-p.oy)*P.d;p.ox=p.x;p.oy=p.y;p.x+=vx+P.w*(Math.sin(t*.03+p.y*.02)+.6)*.15;p.y+=vy+P.g}
+if(mouse.d&&mouse.b==2)cons=cons.filter(k=>Math.hypot((k.a.x+k.b.x)/2-mouse.x,(k.a.y+k.b.y)/2-mouse.y)>14);
+for(let i=0;i<P.it;i++){if(grab){grab.x=mouse.x;grab.y=mouse.y}
+for(const k of cons){const dx=k.b.x-k.a.x,dy=k.b.y-k.a.y,d=Math.hypot(dx,dy)||1,f=(d-k.l)/d,wa=k.a.pin||k.a===grab?0:1,wb=k.b.pin||k.b===grab?0:1,sw=wa+wb;if(!sw)continue;
+k.a.x+=dx*f*wa/sw;k.a.y+=dy*f*wa/sw;k.b.x-=dx*f*wb/sw;k.b.y-=dy*f*wb/sw}}
+cons=cons.filter(k=>Math.hypot(k.b.x-k.a.x,k.b.y-k.a.y)<k.l*P.te);
+g.fillStyle='#05060a';g.fillRect(0,0,W,H);g.strokeStyle='#6cf';g.beginPath();for(const k of cons){g.moveTo(k.a.x,k.a.y);g.lineTo(k.b.x,k.b.y)}g.stroke();
+g.fillStyle='#fc6';for(const p of pts)if(p.pin)g.fillRect(p.x-3,p.y-3,6,6)});
+</script>

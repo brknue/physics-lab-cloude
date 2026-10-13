@@ -1,0 +1,34 @@
+<!doctype html><meta charset=utf-8><title>Ideal Gas and Piston</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Ideal gas in a box. Move the piston and change temperature; pressure follows PV = NkT.');
+const P=UI([{k:'N',label:'Particles',min:10,max:400,step:1,v:150,on:()=>init()},{k:'T',label:'Temperature',min:.2,max:6,v:2,on:()=>resc()},{k:'V',label:'Volume (piston)',min:150,max:800,step:1,v:500},{k:'g',label:'Gravity',min:0,max:.05,step:.001,v:0},{k:'r',label:'Particle radius',min:1,max:8,step:.5,v:3},{label:'Reset',btn:()=>init()}]);
+const X0=60;let A=[],pr=0,xo=0;
+const gs=()=>Math.sqrt(P.T)*(Math.random()+Math.random()+Math.random()+Math.random()-2)*1.73;
+function init(){A=[];for(let i=0;i<P.N;i++)A.push({x:X0+20+Math.random()*(P.V-40),y:110+Math.random()*(H-220),vx:gs(),vy:gs()});xo=X0+P.V}
+function resc(){let s=0;for(const a of A)s+=a.vx*a.vx+a.vy*a.vy;const k=Math.sqrt(2*P.T*A.length/(s||1));for(const a of A){a.vx*=k;a.vy*=k}}
+init();
+RUN(()=>{const top=100,bot=H-100,xr=X0+P.V,pv=Math.max(-3,Math.min(3,xr-xo)),r=P.r;xo=xr;let imp=0;
+for(const a of A){a.vy+=P.g;a.x+=a.vx;a.y+=a.vy;
+if(a.x<X0+r){a.x=X0+r;imp+=2*Math.abs(a.vx);a.vx=Math.abs(a.vx)}
+if(a.x>xr-r){a.x=xr-r;const vn=a.vx-pv;if(vn>0){imp+=2*vn;a.vx=pv-vn}}
+if(a.y<top+r){a.y=top+r;imp+=2*Math.abs(a.vy);a.vy=Math.abs(a.vy)}
+if(a.y>bot-r){a.y=bot-r;imp+=2*Math.abs(a.vy);a.vy=-Math.abs(a.vy)}}
+for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++){const a=A[i],b=A[j],dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy;if(d2<4*r*r&&d2>0){const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,dv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(dv<0){a.vx+=dv*nx;a.vy+=dv*ny;b.vx-=dv*nx;b.vy-=dv*ny}const o=(2*r-d)/2;a.x-=nx*o;a.y-=ny*o;b.x+=nx*o;b.y+=ny*o}}
+pr=pr*.99+imp/(2*(P.V+bot-top))*.01;
+g.fillStyle='#05060a';g.fillRect(0,0,W,H);g.strokeStyle='#567';g.strokeRect(X0,top,P.V,bot-top);g.fillStyle='#c84';g.fillRect(xr,top-4,8,bot-top+8);
+let ke=0;const bins=new Array(24).fill(0);
+for(const a of A){const v=Math.hypot(a.vx,a.vy);ke+=v*v/2;bins[Math.min(23,v/6*24|0)]++;g.fillStyle='hsl('+Math.max(0,240-v*45)+',90%,60%)';g.beginPath();g.arc(a.x,a.y,r,0,7);g.fill()}
+const Ta=ke/A.length;g.fillStyle='#9ab';g.fillText('Pressure '+pr.toFixed(4)+'   Measured KE/particle '+Ta.toFixed(2)+'   P*A/(N*T) = '+(pr*P.V*(bot-top)/(A.length*Ta)).toFixed(2)+'  (ideal = 1)',X0,top-14);
+const bw=300/24;g.fillStyle='rgba(120,200,255,.5)';bins.forEach((n,i)=>g.fillRect(X0+i*bw,H-20-n*2,bw-1,n*2));
+g.strokeStyle='#fc6';g.beginPath();for(let i=0;i<24;i++){const v=(i+.5)*.25,e=A.length*(v/Ta)*Math.exp(-v*v/(2*Ta))*.25;i?g.lineTo(X0+(i+.5)*bw,H-20-e*2):g.moveTo(X0+.5*bw,H-20-e*2)}g.stroke();g.fillStyle='#9ab';g.fillText('Speed distribution vs Maxwell-Boltzmann (yellow)',X0+310,H-24)});
+</script>

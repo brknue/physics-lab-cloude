@@ -1,0 +1,17 @@
+<!doctype html><title>Chaos: Double Pendulums</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:13px system-ui;color:#9ab}#h{position:fixed;left:12px;top:10px;pointer-events:none}canvas{display:block}</style>
+<canvas id=c></canvas><div id=h>8 double pendulums, starting angles differ by 0.001 rad — watch chaos pull them apart. Click to restart.</div>
+<script>
+const c=document.getElementById('c'),g=c.getContext('2d');let W,H;function rs(){W=c.width=innerWidth;H=c.height=innerHeight}rs();onresize=rs;
+const G=9.81;
+function f([a,b,w,v]){const d=a-b,n=3-Math.cos(2*d);
+return[w,v,(-G*3*Math.sin(a)-G*Math.sin(a-2*b)-2*Math.sin(d)*(v*v+w*w*Math.cos(d)))/n,
+(2*Math.sin(d)*(2*w*w+2*G*Math.cos(a)+v*v*Math.cos(d)))/n]}
+const add=(s,k,d)=>s.map((x,i)=>x+k*d[i]);
+function rk4(s,h){const k1=f(s),k2=f(add(s,h/2,k1)),k3=f(add(s,h/2,k2)),k4=f(add(s,h,k3));return s.map((x,i)=>x+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]))}
+let S;function init(){S=[...Array(8)].map((_,i)=>[2.2+i*.001,2.2,0,0]);g.fillStyle='#05060a';g.fillRect(0,0,W,H)}init();c.onclick=init;
+function loop(){g.fillStyle='rgba(5,6,10,.08)';g.fillRect(0,0,W,H);const L=Math.min(W,H)*.22;
+S=S.map(s=>{for(let k=0;k<4;k++)s=rk4(s,.004);return s});
+S.forEach((s,i)=>{const x1=W/2+L*Math.sin(s[0]),y1=H/2.6+L*Math.cos(s[0]),x2=x1+L*Math.sin(s[1]),y2=y1+L*Math.cos(s[1]);
+g.strokeStyle='hsla('+i*40+',90%,60%,.9)';g.lineWidth=2;g.beginPath();g.moveTo(W/2,H/2.6);g.lineTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+g.fillStyle='hsl('+i*40+',90%,65%)';g.beginPath();g.arc(x2,y2,4,0,7);g.fill()});requestAnimationFrame(loop)}loop();
+</script>

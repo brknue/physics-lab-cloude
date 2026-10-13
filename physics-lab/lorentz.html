@@ -1,0 +1,30 @@
+<!doctype html><meta charset=utf-8><title>Charged Particle in E and B</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Drag on canvas to launch a charged particle (drag = velocity). Dots/crosses show B (out of / into screen). Lower the speed of light to see relativistic effects.');
+const P=UI([{k:'B',label:'Magnetic B',min:-3,max:3,v:1},{k:'E',label:'Electric E',min:0,max:1,v:0},{k:'ea',label:'E direction (deg)',min:0,max:360,step:1,v:90},{k:'qm',label:'Charge / mass',min:-2,max:2,v:1},{k:'c',label:'Speed of light',min:3,max:100,step:1,v:100},{k:'tr',label:'Trail length',min:50,max:2000,step:10,v:600},{label:'Clear',btn:()=>S=[]}]);
+let S=[],d0=null;
+c.addEventListener('mousedown',e=>d0=[e.clientX,e.clientY]);
+addEventListener('mouseup',e=>{if(d0){S.push({x:d0[0],y:d0[1],ux:(e.clientX-d0[0])*.05,uy:(e.clientY-d0[1])*.05,qm:P.qm,t:[]});d0=null}});
+RUN(()=>{g.fillStyle='#05060a';g.fillRect(0,0,W,H);g.fillStyle='rgba(120,160,255,'+(.12+Math.abs(P.B)/4)+')';g.font='16px system-ui';
+for(let x=40;x<W;x+=70)for(let y=40;y<H;y+=70){if(P.B>=0){g.beginPath();g.arc(x,y,2.5,0,7);g.fill()}else g.fillText('x',x-4,y+5)}g.font='12px system-ui';
+const ea=P.ea*Math.PI/180,ex=P.E*.1*Math.cos(ea),ey=-P.E*.1*Math.sin(ea);
+g.strokeStyle='#fc6';g.beginPath();g.moveTo(70,H-70);g.lineTo(70+ex*400,H-70+ey*400);g.stroke();g.fillStyle='#fc6';g.fillText('E',60,H-50);
+for(const p of S){for(let s=0;s<4;s++){p.ux+=.5*p.qm*ex;p.uy+=.5*p.qm*ey;
+const ga=Math.sqrt(1+(p.ux*p.ux+p.uy*p.uy)/(P.c*P.c)),t=.5*.2*P.B*p.qm/ga,sc=2*t/(1+t*t),vx=p.ux+p.uy*t,vy=p.uy-p.ux*t;
+p.ux+=vy*sc;p.uy-=vx*sc;p.ux+=.5*p.qm*ex;p.uy+=.5*p.qm*ey;
+const g2=Math.sqrt(1+(p.ux*p.ux+p.uy*p.uy)/(P.c*P.c));p.x+=p.ux/g2;p.y+=p.uy/g2;p.g=g2;p.v=Math.hypot(p.ux,p.uy)/g2}
+p.t.push([p.x,p.y]);while(p.t.length>P.tr)p.t.shift();
+g.strokeStyle=p.qm>0?'#f86':'#6bf';g.beginPath();p.t.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.stroke();g.fillStyle='#fff';g.beginPath();g.arc(p.x,p.y,3,0,7);g.fill()}
+const l=S[S.length-1];if(l){g.fillStyle='#9ab';g.fillText('last particle: speed '+l.v.toFixed(2)+'  gamma '+l.g.toFixed(3),12,H-14)}
+if(d0){g.strokeStyle='#fff';g.beginPath();g.moveTo(d0[0],d0[1]);g.lineTo(mouse.x,mouse.y);g.stroke()}});
+</script>

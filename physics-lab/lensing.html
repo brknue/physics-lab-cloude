@@ -1,0 +1,23 @@
+<!doctype html><meta charset=utf-8><title>Gravitational Lensing</title><body><script>document.head.insertAdjacentHTML('beforeend','<meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{margin:0;background:#05060a;overflow:hidden;font:12px system-ui;color:#9ab}canvas{display:block}#p{position:fixed;right:8px;top:8px;background:#0b1220e0;border:1px solid #234;padding:8px;border-radius:6px;width:180px;max-height:94vh;overflow:auto}#p label{display:block;margin:5px 0}#p input{width:100%}#p b{float:right;color:#7cf}#p button{margin:2px;background:#123;color:#9cf;border:1px solid #246;padding:3px 8px;cursor:pointer}#h{position:fixed;left:10px;top:8px;pointer-events:none;max-width:60vw}</style>');
+let W,H,c,g,paused=0;const mouse={x:0,y:0,d:0,b:0};
+function CV(t){c=document.createElement('canvas');document.body.append(c);g=c.getContext('2d');const r=()=>{W=c.width=innerWidth;H=c.height=innerHeight};r();onresize=r;
+const h=document.createElement('div');h.id='h';h.textContent=t;document.body.append(h);
+onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};c.addEventListener('mousedown',e=>{mouse.d=1;mouse.b=e.button;mouse.x=e.clientX;mouse.y=e.clientY});onmouseup=()=>mouse.d=0;oncontextmenu=e=>e.preventDefault()}
+function UI(defs){const P={},d=document.createElement('div');d.id='p';
+for(const o of defs){if(o.btn){const b=document.createElement('button');b.textContent=o.label;b.onclick=o.btn;d.append(b);continue}
+P[o.k]=o.v;const l=document.createElement('label');l.innerHTML=o.label+' <b>'+o.v+'</b><input type=range min='+o.min+' max='+o.max+' step='+(o.step||.01)+' value='+o.v+'>';
+const i=l.querySelector('input'),b=l.querySelector('b');i.oninput=()=>{P[o.k]=+i.value;b.textContent=i.value;o.on&&o.on()};d.append(l)}
+const p=document.createElement('button');p.textContent='Pause';p.onclick=()=>paused=!paused;d.append(p);document.body.append(d);return P}
+function RUN(fn){const f=()=>{paused||fn();requestAnimationFrame(f)};f()}
+</script><script>
+CV('Drag a lens mass to move it. Light bends around mass (GR deflection = 2x Newtonian).');
+const P=UI([{k:'M',label:'Lens strength',min:0,max:3000,step:10,v:800},{k:'n',label:'Rays',min:10,max:300,step:1,v:80},{k:'src',label:'Beam: 0 parallel / 1 point',min:0,max:1,step:1,v:0},{k:'rad',label:'Lens size',min:2,max:60,step:1,v:14},{label:'Add mass',btn:()=>L.push({x:W/2+Math.random()*200-100,y:H/2+Math.random()*200-100})},{label:'Reset',btn:()=>L=[{x:W*.5,y:H/2}]}]);
+let L=[{x:W*.5,y:H/2}],gr=null;
+RUN(()=>{if(mouse.d){if(!gr)gr=L.reduce((a,b)=>Math.hypot(a.x-mouse.x,a.y-mouse.y)<Math.hypot(b.x-mouse.x,b.y-mouse.y)?a:b);gr.x=mouse.x;gr.y=mouse.y}else gr=null;
+g.fillStyle='#05060a';g.fillRect(0,0,W,H);
+for(let i=0;i<P.n;i++){let x,y,dx,dy;if(P.src){x=50;y=H/2;const a=(i/(P.n-1)-.5)*1.4;dx=Math.cos(a);dy=Math.sin(a)}else{x=0;y=H*(i+.5)/P.n;dx=1;dy=0}
+g.strokeStyle='hsla('+(180+i*160/P.n)+',90%,65%,.55)';g.beginPath();g.moveTo(x,y);
+for(let s=0;s<1500;s++){let hit=0;for(const l of L){const rx=l.x-x,ry=l.y-y,r2=rx*rx+ry*ry;if(r2<P.rad*P.rad){hit=1;break}const k=P.M*.04/(r2*Math.sqrt(r2));dx+=rx*k;dy+=ry*k}
+if(hit)break;const n=Math.hypot(dx,dy);dx/=n;dy/=n;x+=dx*2;y+=dy*2;g.lineTo(x,y);if(x<-50||x>W+50||y<-50||y>H+50)break}g.stroke()}
+for(const l of L){g.fillStyle='#000';g.strokeStyle='#fc6';g.beginPath();g.arc(l.x,l.y,P.rad,0,7);g.fill();g.stroke()}});
+</script>
