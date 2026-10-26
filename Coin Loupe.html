@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coin Loupe – euro coin irregularity scanner</title>
+<style>
+:root{--bg:#e9eeea;--fg:#14211d;--mut:#55655f;--card:#f8faf8;--line:#c5d0ca;--acc:#0f5a50;--accfg:#fff;--ok:#2f7d4f;--warn:#b86e00;--hot:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1411;--fg:#e6efe9;--mut:#93a79e;--card:#13201b;--line:#27392f;--acc:#5fd0bd;--accfg:#06201a;--ok:#6fcf93;--warn:#f0b04a;--hot:#ff8a7e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1411;--fg:#e6efe9;--mut:#93a79e;--card:#13201b;--line:#27392f;--acc:#5fd0bd;--accfg:#06201a;--ok:#6fcf93;--warn:#f0b04a;--hot:#ff8a7e;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+h1{font:700 2rem/1.1 "Iowan Old Style",Palatino,Georgia,serif;margin:8px 0 6px;letter-spacing:-.01em}
+.lead{color:var(--mut);margin:0 0 22px;max-width:52ch}
+h2{font:600 1.05rem/1.3 "Iowan Old Style",Palatino,Georgia,serif;margin:22px 0 8px}
+#chips{display:flex;flex-wrap:wrap;gap:8px}
+#chips button{font:inherit;min-height:44px;min-width:60px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+#chips button[aria-pressed="true"]{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+.drop{display:flex;align-items:center;justify-content:center;gap:10px;min-height:92px;border:2px dashed var(--acc);border-radius:18px;background:var(--card);cursor:pointer;text-align:center;padding:14px;font-weight:600;color:var(--acc)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop:focus-within{outline:3px solid var(--acc);outline-offset:3px}
+#st{color:var(--mut);margin:10px 0;min-height:1.5em}
+#stage{margin-top:6px}
+#cv{width:100%;height:auto;display:block;border-radius:14px;border:1px solid var(--line);background:#000;cursor:pointer}
+.ctl{display:flex;align-items:center;gap:12px;margin:12px 0}
+.ctl input{flex:1;accent-color:var(--acc);min-height:32px}
+#sum{font:600 1.1rem/1.3 "Iowan Old Style",Palatino,Georgia,serif;margin:14px 0 4px}
+.note{color:var(--mut);font-size:.88rem;margin:4px 0 14px}
+.card{display:flex;gap:12px;padding:12px;margin:10px 0;border:1px solid var(--line);border-left-width:6px;border-radius:12px;background:var(--card)}
+.card.ok{border-left-color:var(--ok)}.card.warn{border-left-color:var(--warn)}.card.hot{border-left-color:var(--hot)}
+.card.sel{outline:3px solid var(--acc)}
+.card canvas{width:72px;height:72px;flex:none;border-radius:50%;background:#000}
+.card h3{margin:0 0 2px;font-size:1rem}
+.card.hot h3{color:var(--hot)}.card.warn h3{color:var(--warn)}.card.ok h3{color:var(--ok)}
+.card ul{margin:4px 0 0;padding-left:18px;color:var(--fg);font-size:.93rem}
+.card li{margin:3px 0}
+details{margin-top:24px;border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:600;min-height:32px}
+details ul{padding-left:20px;color:var(--mut)}
+details li{margin:6px 0}
+[hidden]{display:none!important}
+</style></head>
+<body><main>
+<h1>Coin Loupe</h1>
+<p class="lead">Photograph a pile of euro coins of the same kind. Loupe finds each coin and checks it for size, colour, shape and strike irregularities that collectors pay for.</p>
+
+<h2>1. Which coin is in the photo?</h2>
+<div id="chips" role="group" aria-label="Denomination"></div>
+
+<h2>2. Add a photo</h2>
+<label class="drop"><input id="file" type="file" accept="image/*">Take or choose a photo</label>
+<div id="st" aria-live="polite">Pick a denomination, then add a photo.</div>
+
+<div id="stage" hidden>
+  <canvas id="cv" aria-label="Photo with detected coins"></canvas>
+  <div class="ctl"><label for="sens">Detection</label><input id="sens" type="range" min="1" max="10" value="7"><span id="sv">7</span></div>
+  <p class="note">Missing coins? Raise detection. Seeing ghost circles? Lower it. Tap a coin in the photo to jump to its result.</p>
+  <div id="sum"></div>
+  <div id="res"></div>
+  <p class="note">This is a visual scan of one photo. It can’t read the year, country or mint mark, and it can’t grade wear. Treat flags as hints and check flagged coins by hand.</p>
+</div>
+
+<details><summary>What makes a euro coin valuable?</summary><ul>
+<li>Country and year on the national side. Low-mintage issuers such as Monaco, Vatican City, San Marino and Andorra, and some commemorative 2 € coins, often sell above face value.</li>
+<li>Greek coins from 2002 with an “S” inside the star come from the Finnish mint and are sought after.</li>
+<li>Minting errors: a core that sits off-centre in the ring, a core and ring made from the same metal, an off-centre strike, doubled lettering, a clipped or missing-rim coin.</li>
+<li>Most circulated euro coins are worth face value. Condition matters, so never clean a coin.</li>
+<li>Photo tips: one denomination only, plain matte background, even daylight, coins not touching, camera straight above.</li></ul></details>
+</main>
+<script>
+const MM={'1c':16.25,'2c':18.75,'5c':21.25,'10c':19.75,'20c':22.25,'50c':24.25,'€1':23.25,'€2':25.75};
+const COL={ok:'#4ade80',warn:'#fbbf24',hot:'#f87171'};
+const $=s=>document.querySelector(s);
+let denom='€2',W=0,H=0,data=null,cands=[],coins=[],sel=-1;
+const base=document.createElement('canvas'),bx=base.getContext('2d',{willReadFrequently:true});
+const cv=$('#cv'),cx=cv.getContext('2d');
+const status=t=>$('#st').textContent=t;
+const median=a=>{const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
+const det=m=>m[0]*(m[4]*m[8]-m[5]*m[7])-m[1]*(m[3]*m[8]-m[5]*m[6])+m[2]*(m[3]*m[7]-m[4]*m[6]);
+
+const chips=$('#chips');
+Object.keys(MM).forEach(k=>{const b=document.createElement('button');b.textContent=k[0]==='€'?k.replace('€','€ ')+(k==='€1'?'':''):k.replace('c',' ct');
+ b.textContent=k==='€1'?'1 €':k==='€2'?'2 €':k.replace('c',' ct');
+ b.setAttribute('aria-pressed',k===denom);
+ b.onclick=()=>{denom=k;[...chips.children].forEach(x=>x.setAttribute('aria-pressed',x===b));if(cands.length)analyze()};
+ chips.appendChild(b)});
+
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;
+ const im=new Image();
+ im.onload=async()=>{const s=Math.min(1,720/Math.max(im.width,im.height));
+  W=Math.round(im.width*s);H=Math.round(im.height*s);
+  base.width=cv.width=W;base.height=cv.height=H;bx.drawImage(im,0,0,W,H);
+  data=bx.getImageData(0,0,W,H).data;URL.revokeObjectURL(im.src);
+  $('#stage').hidden=false;await detect();analyze()};
+ im.onerror=()=>status('Could not read that image. Try a JPG or PNG.');
+ im.src=URL.createObjectURL(f)};
+$('#sens').oninput=e=>{$('#sv').textContent=e.target.value;if(cands.length)analyze()};
+
+function blur(g){const o=new Float32Array(g);
+ for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){let s=0;for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)s+=g[(y+j)*W+x+i];o[y*W+x]=s/9}
+ return o}
+
+async function detect(){
+ cands=[];coins=[];sel=-1;draw();$('#res').innerHTML='';$('#sum').textContent='';
+ status('Finding coins…');await new Promise(r=>setTimeout(r,30));
+ const n=W*H,g=new Float32Array(n);
+ for(let i=0;i<n;i++)g[i]=.299*data[i*4]+.587*data[i*4+1]+.114*data[i*4+2];
+ const b=blur(blur(g)),gx=new Float32Array(n),gy=new Float32Array(n),mg=new Float32Array(n);
+ for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){const i=y*W+x;
+  const a=b[i-W-1],u=b[i-W],c=b[i-W+1],d=b[i-1],f=b[i+1],e=b[i+W-1],h=b[i+W],k=b[i+W+1];
+  const sx=c+2*f+k-a-2*d-e,sy=e+2*h+k-a-2*u-c;gx[i]=sx;gy[i]=sy;mg[i]=Math.hypot(sx,sy)}
+ const srt=Float32Array.from(mg).sort(),top=srt.subarray(Math.floor(n*.97));
+ let m=0;for(const v of top)m+=v;m/=top.length;
+ const thr=Math.max(40,m*.3),E=[];
+ for(let i=0;i<n;i++)if(mg[i]>thr)E.push(i%W,(i/W)|0,gx[i]/mg[i],gy[i]/mg[i]);
+ const mx=Math.max(W,H),rmin=Math.max(10,Math.round(.025*mx)),rmax=Math.round(.2*mx);
+ const acc=new Uint16Array(n),T=[];
+ for(let r=rmin;r<=rmax;r++){
+  T.length=0;
+  for(let k=0;k<E.length;k+=4)for(let s=1;s>-2;s-=2){
+   const px=Math.round(E[k]+s*E[k+2]*r),py=Math.round(E[k+1]+s*E[k+3]*r);
+   if(px>=0&&px<W&&py>=0&&py<H){const i=py*W+px;if(acc[i]++===0)T.push(i)}}
+  const base2=2*Math.PI*r;
+  for(const i of T){const x=i%W,y=(i/W)|0;if(x<1||y<1||x>=W-1||y>=H-1)continue;
+   const v=acc[i];if(v<acc[i-1]||v<acc[i+1]||v<acc[i-W]||v<acc[i+W])continue;
+   const s9=acc[i-W-1]+acc[i-W]+acc[i-W+1]+acc[i-1]+v+acc[i+1]+acc[i+W-1]+acc[i+W]+acc[i+W+1];
+   const sc=s9/base2;if(sc>.3)cands.push([sc,x,y,r])}
+  for(const i of T)acc[i]=0;
+  if(r%8===0){status(`Finding coins… ${Math.round((r-rmin)/(rmax-rmin)*100)}%`);await new Promise(r=>setTimeout(r))}}
+ cands.sort((a,b)=>b[0]*(1+b[3]/(2*rmax))-a[0]*(1+a[3]/(2*rmax)));
+ cands=cands.slice(0,6000);
+}
+
+function pick(thr){
+ const A=[];
+ for(const c of cands){if(c[0]<thr)continue;
+  let ok=true;
+  for(let j=0;j<A.length;j++){const a=A[j],d=Math.hypot(c[1]-a[1],c[2]-a[2]);
+   if(d<.8*(c[3]+a[3])){ok=false;if(d<.5*Math.max(c[3],a[3])&&c[3]>1.15*a[3]&&c[0]>=.6*a[0])A[j]=c;break}}
+  if(ok)A.push(c)}
+ if(!A.length)return A;
+ const h={};A.forEach(c=>h[c[3]]=(h[c[3]]||0)+c[0]);
+ let best=0,R0=0;for(const k in h){const r=+k,v=(h[r-1]||0)+h[r]+(h[r+1]||0);if(v>best){best=v;R0=r}}
+ return A.filter(c=>c[3]>=.78*R0&&c[3]<=1.35*R0)}
+
+const P=(x,y)=>{x=Math.min(W-1,Math.max(0,Math.round(x)));y=Math.min(H-1,Math.max(0,Math.round(y)));const i=(y*W+x)*4;return [data[i],data[i+1],data[i+2]]};
+const Lm=(x,y)=>{const p=P(x,y);return .299*p[0]+.587*p[1]+.114*p[2]};
+function region(x,y,r0,r1){let s=[0,0,0],n=0;
+ for(let a=0;a<24;a++){const t=a/24*6.2832,ct=Math.cos(t),st=Math.sin(t);
+  for(let k=0;k<3;k++){const q=r0+(r1-r0)*(k+.5)/3,p=P(x+ct*q,y+st*q);s[0]+=p[0];s[1]+=p[1];s[2]+=p[2];n++}}
+ return s.map(v=>v/n)}
+const chroma=v=>{const t=v[0]+v[1]+v[2]+1;return [v[0]/t,v[1]/t]};
+function seg(x,y,ct,sn,s0,s1){let s=[0,0,0];for(let k=0;k<4;k++){const q=s0+(s1-s0)*(k+.5)/4,p=P(x+ct*q,y+sn*q);s[0]+=p[0];s[1]+=p[1];s[2]+=p[2]}return s.map(v=>v/4)}
+function fit(Q){const n=Q.length;if(n<3)return null;
+ let mx=0,my=0;for(const p of Q){mx+=p[0];my+=p[1]}mx/=n;my/=n;
+ let sx=0,sy=0,sxx=0,syy=0,sxy=0,sz=0,sxz=0,syz=0;
+ for(const p of Q){const x=p[0]-mx,y=p[1]-my,z=x*x+y*y;sx+=x;sy+=y;sxx+=x*x;syy+=y*y;sxy+=x*y;sz+=z;sxz+=x*z;syz+=y*z}
+ const D=det([sxx,sxy,sx,sxy,syy,sy,sx,sy,n]);if(Math.abs(D)<1e-6)return null;
+ const A=det([sxz,sxy,sx,syz,syy,sy,sz,sy,n])/D,B=det([sxx,sxz,sx,sxy,syz,sy,sx,sz,n])/D,C=det([sxx,sxy,sxz,sxy,syy,syz,sx,sy,sz])/D;
+ const a=A/2,b=B/2;return [a+mx,b+my,Math.sqrt(Math.max(0,C+a*a+b*b))]}
+
+function outline(c){const o=[];
+ for(let a=0;a<48;a++){const t=a/48*6.2832,ct=Math.cos(t),st=Math.sin(t);let best=0,bs=c.r;
+  for(let s=c.r*.85;s<=c.r*1.15;s+=.5){const d=Math.abs(Lm(c.x+ct*(s-2),c.y+st*(s-2))-Lm(c.x+ct*(s+2),c.y+st*(s+2)));if(d>best){best=d;bs=s}}
+  o.push(bs)}
+ return o}
+
+function coreAlign(c){const pts=[];
+ for(let a=0;a<36;a++){const t=a/36*6.2832,ct=Math.cos(t),sn=Math.sin(t);let best=0,bs=0;
+  for(let q=.6;q<=.86;q+=.02){const s=q*c.r,i0=seg(c.cx,c.cy,ct,sn,s-.09*c.r,s-.02*c.r),i1=seg(c.cx,c.cy,ct,sn,s+.02*c.r,s+.09*c.r);
+   const d=Math.hypot(i0[0]-i1[0],i0[1]-i1[1],i0[2]-i1[2]);if(d>best){best=d;bs=s}}
+  pts.push([c.cx+ct*bs,c.cy+sn*bs,best])}
+ const mx=Math.max(...pts.map(p=>p[2])),good=pts.filter(p=>p[2]>=.45*mx);
+ if(mx<15||good.length<20)return null;
+ const F=fit(good);if(!F||F[2]/c.r<.5||F[2]/c.r>.85)return null;
+ return{off:Math.hypot(F[0]-c.cx,F[1]-c.cy)/c.r}}
+
+function analyze(){
+ const thr=Math.max(.3,1.4-.12*(+$('#sens').value));
+ coins=pick(thr).map(c=>({x:c[1],y:c[2],r:c[3],pts:0,f:[]}));sel=-1;
+ if(!coins.length){draw();$('#res').innerHTML='';$('#sum').textContent='';status('No coins found. Raise detection, or retake the photo on a plain background in even light.');return}
+ const bi=denom==='€1'||denom==='€2',N=coins.length,R0=median(coins.map(c=>c.r)),mmpp=MM[denom]/(2*R0);
+ for(const c of coins){
+  const o=outline(c),m=median(o),inl=o.map((s,i)=>[s,i]).filter(p=>Math.abs(p[0]-m)<.1*m);
+  c.cx=c.x;c.cy=c.y;c.sd=0;
+  if(inl.length>=24){const F=fit(inl.map(p=>{const t=p[1]/48*6.2832;return [c.x+Math.cos(t)*p[0],c.y+Math.sin(t)*p[0]]}));
+   if(F&&Math.hypot(F[0]-c.x,F[1]-c.y)<.2*c.r){c.cx=F[0];c.cy=F[1]}
+   const mean=inl.reduce((a,p)=>a+p[0],0)/inl.length;c.sd=Math.sqrt(inl.reduce((a,p)=>a+(p[0]-mean)**2,0)/inl.length)/mean}
+  c.col=chroma(region(c.cx,c.cy,.15*c.r,.9*c.r));
+  if(bi){const ri=chroma(region(c.cx,c.cy,.8*c.r,.94*c.r)),co=chroma(region(c.cx,c.cy,0,.55*c.r));
+   c.dcr=Math.hypot(ri[0]-co[0],ri[1]-co[1]);c.al=coreAlign(c)}}
+ const add=(c,p,t)=>{c.pts+=p;c.f.push(t)};
+ if(N>=4){
+  const m0=median(coins.map(c=>c.col[0])),m1=median(coins.map(c=>c.col[1]));
+  const ds=coins.map(c=>Math.hypot(c.col[0]-m0,c.col[1]-m1)),dm=median(ds),md=bi?median(coins.map(c=>c.dcr)):0;
+  coins.forEach((c,i)=>{
+   const dev=c.r/R0-1;
+   if(Math.abs(dev)>.06)add(c,30,`Diameter ${dev>0?'+':''}${(dev*100).toFixed(0)}% compared with the other coins (about ${(2*c.r*mmpp).toFixed(1)} mm instead of ${MM[denom]} mm). Could be a different denomination or a wrong-planchet error.`);
+   if(ds[i]>Math.max(.025,dm*3))add(c,25,'Metal colour differs from the rest. Could be another coin type, a wrong-metal planchet, or just heavy toning.');
+   if(bi&&md>.02&&c.dcr<.35*md)add(c,45,'Core and ring look like the same metal. Bimetal mix-ups like this are a known, valuable error.')})}
+ for(const c of coins){
+  if(c.sd>.045)add(c,20,'Outline is not a clean circle. Could be a clipped, bent or off-centre strike, or a tilted camera.');
+  if(bi&&c.al&&c.al.off>.06&&c.r*c.al.off>2)add(c,40,`Core is shifted about ${(c.al.off*100).toFixed(0)}% of the radius off-centre inside the ring. A misaligned core is a rare error.`)}
+ coins.forEach(c=>c.lvl=c.pts>=40?'hot':c.pts>=20?'warn':'ok');
+ const hot=coins.filter(c=>c.lvl==='hot').length,warn=coins.filter(c=>c.lvl==='warn').length;
+ status('');
+ $('#sum').textContent=`${N} coins found: ${hot} strong candidate${hot===1?'':'s'}, ${warn} worth a closer look.`;
+ draw();render()}
+
+function draw(){
+ if(!W)return;cx.drawImage(base,0,0);
+ coins.forEach((c,i)=>{cx.beginPath();cx.arc(c.x,c.y,c.r,0,7);cx.lineWidth=i===sel?5:2.5;cx.strokeStyle=COL[c.lvl];cx.stroke();
+  cx.font=`700 ${Math.max(12,c.r*.5)}px system-ui,sans-serif`;cx.textAlign='center';cx.textBaseline='middle';
+  cx.lineWidth=3;cx.strokeStyle='rgba(0,0,0,.65)';cx.strokeText(i+1,c.x,c.y);cx.fillStyle=COL[c.lvl];cx.fillText(i+1,c.x,c.y)})}
+
+function render(){
+ const box=$('#res');box.innerHTML='';
+ coins.map((c,i)=>i).sort((a,b)=>coins[b].pts-coins[a].pts).forEach(i=>{
+  const c=coins[i],d=document.createElement('div');d.className='card '+c.lvl;d.id='c'+i;
+  const t=document.createElement('canvas');t.width=t.height=72;const g=t.getContext('2d');
+  g.beginPath();g.arc(36,36,36,0,7);g.clip();g.drawImage(base,c.x-c.r,c.y-c.r,2*c.r,2*c.r,0,0,72,72);
+  const info=document.createElement('div'),h=document.createElement('h3'),ul=document.createElement('ul');
+  h.textContent=`Coin ${i+1}: ${c.lvl==='hot'?'strong candidate':c.lvl==='warn'?'worth a closer look':'looks normal'}`;
+  (c.f.length?c.f:['No size, colour, outline or core irregularities detected.']).forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.appendChild(li)});
+  info.append(h,ul);d.append(t,info);d.onclick=()=>{sel=i;draw();mark(i)};box.appendChild(d)})}
+function mark(i){document.querySelectorAll('.card').forEach(x=>x.classList.remove('sel'));const e=$('#c'+i);if(e){e.classList.add('sel');e.scrollIntoView({behavior:'smooth',block:'center'})}}
+cv.onclick=e=>{const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)*W/b.width,y=(e.clientY-b.top)*H/b.height;
+ const i=coins.findIndex(c=>Math.hypot(c.x-x,c.y-y)<c.r);if(i>=0){sel=i;draw();mark(i)}};
+</script></body></html>
